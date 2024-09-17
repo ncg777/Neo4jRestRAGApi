@@ -7,13 +7,13 @@ using System.Net.Mime;
 using System.Text;
 using System.Net.Http.Headers;
 using Microsoft.SemanticKernel.Embeddings;
-using RagRest.Clients;
 using LangChain.Prompts;
+using Neo4jRestRAGApi.Clients;
 
-namespace RagRest.Controllers
+namespace Neo4jRestRAGApi.Controllers
 {
     [ApiController]
-    [Microsoft.AspNetCore.Mvc.Route("/v1/chat")]
+    [Route("/v1/chat")]
     public class Neo4jRestRAGApiController : ControllerBase
     {
         private readonly ILogger<Neo4jRestRAGApiController> _logger;
@@ -27,8 +27,8 @@ namespace RagRest.Controllers
             _settings = settings;
             _embeddingService = embeddingService;
         }
-        private static readonly string SYSTEMMESSAGE = "You are a highly intelligent and efficient AI agent, designed to assist users by retrieving relevant information from your internal knowledge base (embedding store). Your primary goals are to provide accurate, relevant, and up-to-date answers while maintaining clarity and simplicity. If certain queries involve opinion or speculation, present information impartially. Always remain concise, polite, and clear.";  
-        private MessageRoleType getRole(String role)
+        private static readonly string SYSTEMMESSAGE = "You are a highly intelligent and efficient AI agent, designed to assist users by retrieving relevant information from your internal knowledge base (embedding store). Your primary goals are to provide accurate, relevant, and up-to-date answers while maintaining clarity and simplicity. If certain queries involve opinion or speculation, present information impartially. Always remain concise, polite, and clear.";
+        private MessageRoleType getRole(string role)
         {
             switch (role)
             {
@@ -39,9 +39,9 @@ namespace RagRest.Controllers
             }
             throw new Exception("unknown role");
         }
-        public struct QueryResult : IEquatable<QueryResult> 
+        public struct QueryResult : IEquatable<QueryResult>
         {
-            public Dictionary<string,object> Metadata{get;set ;} 
+            public Dictionary<string, object> Metadata { get; set; }
             public string Id { get; set; }
             public string Text { get; set; }
             public double Score { get; set; }
@@ -54,7 +54,7 @@ namespace RagRest.Controllers
                     Text = record.Get<string>("text"),
                     Score = record.Get<double>("score")
                 };
-                
+
             }
             public bool Equals(QueryResult other)
             {
@@ -62,9 +62,9 @@ namespace RagRest.Controllers
             }
         }
 
-    
-        [Microsoft.AspNetCore.Mvc.HttpPost]
-        [Microsoft.AspNetCore.Mvc.Route("completions")]
+
+        [HttpPost]
+        [Route("completions")]
         [Consumes(MediaTypeNames.Application.Json)]
         [Produces(MediaTypeNames.Application.Json)]
         public async Task Completions(JsonObject request)
@@ -76,7 +76,7 @@ namespace RagRest.Controllers
             var lastMessageContent = lastMessage["content"]?.GetValue<string>() ?? "";
 
             var lastMessageRole = lastMessage["role"]?.GetValue<string>() ?? "";
-            var systemMessage = JsonObject.Parse("{\"role\": \"system\", \"content\":\"" + SYSTEMMESSAGE +  "\"}");
+            var systemMessage = JsonNode.Parse("{\"role\": \"system\", \"content\":\"" + SYSTEMMESSAGE + "\"}");
 
             messages.Insert(0, systemMessage);
 
@@ -95,7 +95,7 @@ namespace RagRest.Controllers
             var session = _client.Driver.AsyncSession();
             var query = await session.RunAsync(queryString);
 
-            String context = "Context results from memory:\n=== START CONTEXTUAL RESULTS ===\n\n";
+            string context = "Context results from memory:\n=== START CONTEXTUAL RESULTS ===\n\n";
             bool any = false;
             var results = await query.ToListAsync();
             var qrs = results.Select(
@@ -112,7 +112,7 @@ namespace RagRest.Controllers
                 context += "==== END RESULT WITH ID \" + qr.Id + \"====\n";
             }
             context += "\n=== END CONTEXTUAL RESULTS ===\n\n";
-            String question = !any ? lastMessageContent :
+            string question = !any ? lastMessageContent :
                 "Use the following pieces of context results fetched from your memory to answer the question at the end.\n\n" +
                 $"{context}\n\n" +
                 $"Question: {lastMessageContent}";
@@ -128,7 +128,7 @@ namespace RagRest.Controllers
             response.EnsureSuccessStatusCode();
             Response.Headers.Append("Connection", "keep-alive");
             Response.Headers.Append("TransferEncoding", "chunked");
-            foreach(var h in response.TrailingHeaders)
+            foreach (var h in response.TrailingHeaders)
             {
                 Response.AppendTrailer(h.Key, new Microsoft.Extensions.Primitives.StringValues(h.Value.ToArray()));
             }

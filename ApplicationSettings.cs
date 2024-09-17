@@ -1,4 +1,4 @@
-﻿namespace RagRest
+﻿namespace Neo4jRestRAGApi
 {
     public class ApplicationSettings
     {

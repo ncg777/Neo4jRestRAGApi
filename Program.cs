@@ -1,7 +1,7 @@
 using Microsoft.SemanticKernel.Embeddings;
-using RagRest;
-using RagRest.Clients;
-using RagRest.Services;
+using Neo4jRestRAGApi;
+using Neo4jRestRAGApi.Clients;
+using Neo4jRestRAGApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -2,7 +2,7 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 
-namespace RagRest.Services
+namespace Neo4jRestRAGApi.Services
 {
     public class LocalNomicEmbedTextEmbeddingService : ITextEmbeddingGenerationService
     {

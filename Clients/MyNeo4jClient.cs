@@ -1,6 +1,6 @@
 ﻿using Neo4jClient;
 
-namespace RagRest.Clients
+namespace Neo4jRestRAGApi.Clients
 {
     public class MyNeo4jClient : BoltGraphClient
     {
