@@ -8,6 +8,7 @@ using System.Text;
 using System.Net.Http.Headers;
 using Microsoft.SemanticKernel.Embeddings;
 using RagRest.Clients;
+using LangChain.Prompts;
 
 namespace RagRest.Controllers
 {
@@ -26,7 +27,7 @@ namespace RagRest.Controllers
             _settings = settings;
             _embeddingService = embeddingService;
         }
-        
+        private static readonly string SYSTEMMESSAGE = "You are a highly intelligent and efficient AI agent, designed to assist users by retrieving relevant information from your internal knowledge base (embedding store). Your primary goals are to provide accurate, relevant, and up-to-date answers while maintaining clarity and simplicity. If certain queries involve opinion or speculation, present information impartially. Always remain concise, polite, and clear.";  
         private MessageRoleType getRole(String role)
         {
             switch (role)
@@ -75,6 +76,11 @@ namespace RagRest.Controllers
             var lastMessageContent = lastMessage["content"]?.GetValue<string>() ?? "";
 
             var lastMessageRole = lastMessage["role"]?.GetValue<string>() ?? "";
+            var systemMessage = JsonObject.Parse("{\"role\": \"system\", \"content\":\"" + SYSTEMMESSAGE +  "\"}");
+
+            messages.Insert(0, systemMessage);
+
+
             await _client.ConnectAsync();
 
             var embeddingT = _embeddingService.GenerateEmbeddingAsync(lastMessageContent);
@@ -92,16 +98,18 @@ namespace RagRest.Controllers
             String context = "Context results from memory:\n=== START CONTEXTUAL RESULTS ===\n\n";
             bool any = false;
             var results = await query.ToListAsync();
-            foreach (var res in results)
+            var qrs = results.Select(
+                (res) => QueryResult.fromRecord(res)
+                ).ToList();
+            qrs.Sort((a, b) => b.Score.CompareTo(a.Score));
+            foreach (var qr in qrs)
             {
                 any = true;
-                var qr = QueryResult.fromRecord(res);
-                context += "=== START RESULT ===\n";
-                context += "Result id: " + qr.Id + "\n";
-                context += "Result score: " + qr.Score.ToString() + "\n";
-                if (qr.Metadata.ContainsKey("file_name")) context += "Result source filename: " + qr.Metadata["file_name"].ToString() + "\n";
-                context += "Result text content:\n" + qr.Text + "\n";
-                context += "=== END RESULT ===\n";
+                context += "==== START RESULT WITH ID " + qr.Id + " ====\n";
+                context += "RESULT RELEVANCE SCORE: " + qr.Score.ToString() + "\n";
+                if (qr.Metadata.ContainsKey("file_name")) context += "RESULT SOURCE FILE NAME: " + qr.Metadata["file_name"].ToString() + "\n";
+                context += "===== START RESULT TEXT =====\n" + qr.Text + "\n===== END RESULT TEXT =====\n";
+                context += "==== END RESULT WITH ID \" + qr.Id + \"====\n";
             }
             context += "\n=== END CONTEXTUAL RESULTS ===\n\n";
             String question = !any ? lastMessageContent :
@@ -109,7 +117,6 @@ namespace RagRest.Controllers
                 $"{context}\n\n" +
                 $"Question: {lastMessageContent}";
             lastMessage["content"] = question;
-
 
             var _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "");
