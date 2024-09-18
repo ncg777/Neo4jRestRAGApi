@@ -8,7 +8,7 @@ namespace Neo4jRestRAGApi.Services
     {
         private OpenAiEmbeddingModel service;
         private OpenAiProvider provider;
-        private OpenAI.OpenAIClient client = new OpenAI.OpenAIClient(new OpenAI.OpenAIAuthentication(""), new OpenAI.OpenAIClientSettings("localhost:1234", https: false));
+        private OpenAI.OpenAIClient client = new OpenAI.OpenAIClient(new OpenAI.OpenAIAuthentication(""), new OpenAI.OpenAIClientSettings("localhost:11434", https: false));
 
         public LocalNomicEmbedTextEmbeddingService() : base()
         {
